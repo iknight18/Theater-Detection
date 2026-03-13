@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, Query, Request, UploadFile, HTTPException
 
 from app.config import get_settings
 from app.models.schemas import PoseEstimationResponse, PoseMetadata
-from app.utils.image import validate_image, resize_if_needed, image_to_base64
+from app.utils.image import validate_image, resize_if_needed, save_annotated_image
 
 router = APIRouter(prefix="/api/v1/pose", tags=["Pose Estimation"])
 
@@ -43,14 +43,17 @@ async def estimate_pose(
 
     result = estimator.predict(image, confidence_threshold=confidence_threshold)
 
-    annotated_b64 = None
+    image_id = str(uuid.uuid4())
+
+    annotated_image_url = None
     if return_image and result.annotated_image is not None:
-        annotated_b64 = image_to_base64(result.annotated_image)
+        filename = save_annotated_image(result.annotated_image, image_id)
+        annotated_image_url = f"/annotated_images/{filename}"
 
     return PoseEstimationResponse(
-        image_id=str(uuid.uuid4()),
+        image_id=image_id,
         actors=result.actors,
-        annotated_image=annotated_b64,
+        annotated_image_url=annotated_image_url,
         metadata=PoseMetadata(
             image_width=original_width,
             image_height=original_height,

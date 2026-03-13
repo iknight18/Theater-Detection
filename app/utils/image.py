@@ -1,7 +1,17 @@
-import base64
 import io
+from pathlib import Path
 
 from PIL import Image
+
+ANNOTATED_DIR = Path(__file__).resolve().parent.parent.parent / "annotated_images"
+ANNOTATED_DIR.mkdir(exist_ok=True)
+
+
+def save_annotated_image(img: Image.Image, image_id: str) -> str:
+    filename = f"{image_id}.png"
+    filepath = ANNOTATED_DIR / filename
+    img.save(filepath, format="PNG")
+    return filename
 
 
 def validate_image(
@@ -54,7 +64,3 @@ def resize_if_needed(img: Image.Image, max_size: int) -> Image.Image:
     return img.resize((new_w, new_h), Image.LANCZOS)
 
 
-def image_to_base64(img: Image.Image) -> str:
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return base64.b64encode(buf.getvalue()).decode("utf-8")

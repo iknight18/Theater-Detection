@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 
 from app.config import get_settings
@@ -28,8 +29,10 @@ app = FastAPI(
 
 
 from app.api.routes.pose import router as pose_router
+from app.utils.image import ANNOTATED_DIR
 
 app.include_router(pose_router)
+app.mount("/annotated_images", StaticFiles(directory=str(ANNOTATED_DIR)), name="annotated_images")
 
 
 @app.get("/", include_in_schema=False)

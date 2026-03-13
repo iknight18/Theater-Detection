@@ -26,5 +26,5 @@ class PoseMetadata(BaseModel):
 class PoseEstimationResponse(BaseModel):
     image_id: str
     actors: list[Actor]
-    annotated_image: str | None = None
+    annotated_image_url: str | None = None
     metadata: PoseMetadata
