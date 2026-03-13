@@ -6,20 +6,17 @@ from scalar_fastapi import get_scalar_api_reference
 from app.config import get_settings
 from app.services.yolo_estimator import YoloPoseEstimator
 
-estimator: YoloPoseEstimator | None = None
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global estimator
     settings = get_settings()
     estimator = YoloPoseEstimator(
         model_name=settings.model_name,
         device=settings.device,
     )
     estimator.load_model()
+    app.state.estimator = estimator
     yield
-    estimator = None
+    app.state.estimator = None
 
 
 app = FastAPI(
@@ -28,6 +25,11 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+from app.api.routes.pose import router as pose_router
+
+app.include_router(pose_router)
 
 
 @app.get("/", include_in_schema=False)
@@ -44,6 +46,7 @@ async def scalar_docs():
 
 
 def get_estimator() -> YoloPoseEstimator:
+    estimator = getattr(app.state, "estimator", None)
     if estimator is None:
         raise RuntimeError("Model not initialized")
     return estimator
