@@ -89,7 +89,7 @@ def test_process_image_all_strategies_creates_structure(tmp_path):
     mock_depth = MagicMock()
 
     process_image_all_strategies(
-        img_path, output_dir, mock_estimator, mock_sahi, mock_depth, 0.5, 1920,
+        img_path, output_dir, mock_estimator, mock_sahi, mock_depth, 0.5, 1920, "yolov8",
     )
 
     subfolder = output_dir / "test_photo.png"
@@ -99,15 +99,18 @@ def test_process_image_all_strategies_creates_structure(tmp_path):
     assert (subfolder / "original.png").is_file()
     assert (subfolder / "enhanced.png").is_file()
 
-    # All 3 strategy folders
+    # All 3 strategy folders under model label
+    model_dir = subfolder / "yolov8"
+    assert model_dir.is_dir()
     for strategy in ["baseline", "enhanced", "sahi"]:
-        strategy_dir = subfolder / strategy
+        strategy_dir = model_dir / strategy
         assert strategy_dir.is_dir(), f"Missing {strategy}/ folder"
         assert (strategy_dir / "annotated.png").is_file(), f"Missing {strategy}/annotated.png"
         assert (strategy_dir / "metadata.json").is_file(), f"Missing {strategy}/metadata.json"
+        assert (strategy_dir / "input.png").is_file(), f"Missing {strategy}/input.png"
 
-    # Comparison JSON
-    assert (subfolder / "comparison.json").is_file()
+    # Comparison JSON under model label
+    assert (model_dir / "comparison.json").is_file()
 
 
 def test_process_image_comparison_json_structure(tmp_path):
@@ -135,11 +138,11 @@ def test_process_image_comparison_json_structure(tmp_path):
     mock_depth = MagicMock()
 
     process_image_all_strategies(
-        img_path, output_dir, mock_estimator, mock_sahi, mock_depth, 0.5, 1920,
+        img_path, output_dir, mock_estimator, mock_sahi, mock_depth, 0.5, 1920, "yolov8",
     )
 
     subfolder = output_dir / "test_photo.png"
-    with open(subfolder / "comparison.json") as f:
+    with open(subfolder / "yolov8" / "comparison.json") as f:
         data = json.load(f)
 
     assert "baseline" in data

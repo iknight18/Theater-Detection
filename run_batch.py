@@ -1,10 +1,12 @@
 # run_batch.py
 import argparse
+import gc
 import json
 import sys
 import time
 from pathlib import Path
 
+import torch
 from PIL import Image
 
 from app.config import get_settings
@@ -18,6 +20,11 @@ from app.utils.drawing import draw_distance_lines, draw_pose_on_image
 from app.utils.image import resize_if_needed, adaptive_enhance
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+AVAILABLE_MODELS = {
+    "yolov8": "yolov8m-pose.pt",
+    "yolov11": "yolo11m-pose.pt",
+}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -34,6 +41,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--confidence", type=float, default=0.25,
         help="Minimum detection confidence (default: 0.25)"
+    )
+    parser.add_argument(
+        "--models", type=str, default="yolov8",
+        help=f"Comma-separated model names to compare (default: yolov8). "
+             f"Available: {', '.join(AVAILABLE_MODELS.keys())}"
     )
     return parser.parse_args(argv)
 
@@ -103,33 +115,37 @@ def process_image_all_strategies(
     depth_estimator: DepthEstimator,
     confidence: float,
     max_image_size: int,
+    model_label: str,
 ) -> dict[str, int]:
-    """Run all 3 strategies on one image. Returns actor counts per strategy."""
+    """Run all 3 strategies on one image for a given model. Returns actor counts per strategy."""
     img = Image.open(image_path).convert("RGB")
     original_width, original_height = img.size
     resized = resize_if_needed(img, max_size=max_image_size)
 
-    # Scale factors (1.0 since we annotate on the resized image)
     scale_x = 1.0
     scale_y = 1.0
 
-    # Enhanced version for strategies 2 and 3
     enhanced = adaptive_enhance(resized)
 
-    # Output subfolder
+    # Output subfolder: results/<image_name>/<model_label>/
     subfolder = output_dir / image_path.name
-    subfolder.mkdir(parents=True, exist_ok=True)
+    model_dir = subfolder / model_label
+    model_dir.mkdir(parents=True, exist_ok=True)
 
-    # Export intermediate images
-    resized.save(subfolder / "original.png", format="PNG")
-    enhanced.save(subfolder / "enhanced.png", format="PNG")
+    # Export intermediate images (once per image, not per model)
+    original_path = subfolder / "original.png"
+    if not original_path.exists():
+        resized.save(original_path, format="PNG")
+    enhanced_path = subfolder / "enhanced.png"
+    if not enhanced_path.exists():
+        enhanced.save(enhanced_path, format="PNG")
 
     counts = {}
 
-    # Strategy 1: Baseline (raw YOLO on resized, no enhancement)
+    # Strategy 1: Baseline
     result_baseline = estimator.predict(resized, confidence_threshold=confidence)
     _save_strategy_results(
-        subfolder / "baseline", resized, result_baseline,
+        model_dir / "baseline", resized, result_baseline,
         depth_estimator, resized, image_path.name, estimator.model_name,
         original_width, original_height, scale_x, scale_y,
     )
@@ -138,7 +154,7 @@ def process_image_all_strategies(
     # Strategy 2: Adaptive Enhancement + YOLO
     result_enhanced = estimator.predict(enhanced, confidence_threshold=confidence)
     _save_strategy_results(
-        subfolder / "enhanced", resized, result_enhanced,
+        model_dir / "enhanced", resized, result_enhanced,
         depth_estimator, enhanced, image_path.name, estimator.model_name,
         original_width, original_height, scale_x, scale_y,
     )
@@ -147,13 +163,13 @@ def process_image_all_strategies(
     # Strategy 3: Adaptive Enhancement + SAHI
     result_sahi = sahi_estimator.predict(enhanced, confidence_threshold=confidence)
     _save_strategy_results(
-        subfolder / "sahi", resized, result_sahi,
+        model_dir / "sahi", resized, result_sahi,
         depth_estimator, enhanced, image_path.name, estimator.model_name,
         original_width, original_height, scale_x, scale_y,
     )
     counts["sahi"] = len(result_sahi.actors)
 
-    # Comparison JSON
+    # Comparison JSON per model
     comparison = {}
     for name, result in [
         ("baseline", result_baseline),
@@ -167,10 +183,21 @@ def process_image_all_strategies(
                 sum(a.confidence for a in result.actors) / len(result.actors), 3
             ) if result.actors else 0.0,
         }
-    with open(subfolder / "comparison.json", "w") as f:
+    with open(model_dir / "comparison.json", "w") as f:
         json.dump(comparison, f, indent=2)
 
     return counts
+
+
+def _unload_models(*estimators) -> None:
+    """Unload models and free VRAM."""
+    for est in estimators:
+        if hasattr(est, '_model') and est._model is not None:
+            del est._model
+            est._model = None
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -185,48 +212,68 @@ def main(argv: list[str] | None = None) -> None:
         print(f"No images found in '{args.input}'", file=sys.stderr)
         sys.exit(1)
 
+    model_names = [m.strip() for m in args.models.split(",")]
+    for name in model_names:
+        if name not in AVAILABLE_MODELS:
+            print(f"Error: Unknown model '{name}'. Available: {', '.join(AVAILABLE_MODELS.keys())}", file=sys.stderr)
+            sys.exit(1)
+
     print(f"Found {len(images)} images in '{args.input}'")
-    print("Loading models...")
+    print(f"Models to compare: {', '.join(model_names)}")
 
     settings = get_settings()
 
-    estimator = YoloPoseEstimator(
-        model_name=settings.model_name, device=settings.device
-    )
-    estimator.load_model()
-
-    sahi_estimator = SahiPoseEstimator(
-        model_path=settings.model_name, device=settings.device
-    )
-    sahi_estimator.load_model()
-
+    # Load depth estimator once (shared across all models)
+    print("Loading depth estimator...")
     depth_estimator = DepthEstimator(device=settings.device)
     depth_estimator.load_model()
 
-    print("Models loaded. Processing images...\n")
-
     args.output.mkdir(parents=True, exist_ok=True)
-
-    total_counts = {"baseline": 0, "enhanced": 0, "sahi": 0}
     start_time = time.perf_counter()
 
-    for i, image_path in enumerate(images, 1):
-        print(f"[{i}/{len(images)}] Processing {image_path.name}...", end=" ")
-        try:
-            counts = process_image_all_strategies(
-                image_path, args.output, estimator, sahi_estimator,
-                depth_estimator, args.confidence, settings.max_image_size,
-            )
-            for k, v in counts.items():
-                total_counts[k] += v
-            print(f"baseline={counts['baseline']} enhanced={counts['enhanced']} sahi={counts['sahi']}")
-        except Exception as e:
-            print(f"FAILED ({type(e).__name__}): {e}")
+    # Run each model sequentially to fit in VRAM
+    all_totals = {}
+    for model_label in model_names:
+        model_file = AVAILABLE_MODELS[model_label]
+        print(f"\n{'='*60}")
+        print(f"Loading {model_label} ({model_file})...")
+
+        estimator = YoloPoseEstimator(model_name=model_file, device=settings.device)
+        estimator.load_model()
+
+        sahi_estimator = SahiPoseEstimator(model_path=model_file, device=settings.device)
+        sahi_estimator.load_model()
+
+        print(f"Processing images with {model_label}...\n")
+
+        total_counts = {"baseline": 0, "enhanced": 0, "sahi": 0}
+
+        for i, image_path in enumerate(images, 1):
+            print(f"  [{i}/{len(images)}] {image_path.name}...", end=" ")
+            try:
+                counts = process_image_all_strategies(
+                    image_path, args.output, estimator, sahi_estimator,
+                    depth_estimator, args.confidence, settings.max_image_size,
+                    model_label,
+                )
+                for k, v in counts.items():
+                    total_counts[k] += v
+                print(f"baseline={counts['baseline']} enhanced={counts['enhanced']} sahi={counts['sahi']}")
+            except Exception as e:
+                print(f"FAILED ({type(e).__name__}): {e}")
+
+        all_totals[model_label] = total_counts
+
+        # Unload model before loading next one
+        print(f"\n{model_label} totals — baseline: {total_counts['baseline']}, "
+              f"enhanced: {total_counts['enhanced']}, sahi: {total_counts['sahi']}")
+        _unload_models(estimator, sahi_estimator)
 
     elapsed = time.perf_counter() - start_time
-    print(f"\nDone! {len(images)} images, {elapsed:.1f}s")
-    print(f"Total actors — baseline: {total_counts['baseline']}, "
-          f"enhanced: {total_counts['enhanced']}, sahi: {total_counts['sahi']}")
+    print(f"\n{'='*60}")
+    print(f"Done! {len(images)} images, {len(model_names)} models, {elapsed:.1f}s")
+    for model_label, counts in all_totals.items():
+        print(f"  {model_label}: baseline={counts['baseline']} enhanced={counts['enhanced']} sahi={counts['sahi']}")
 
 
 if __name__ == "__main__":
