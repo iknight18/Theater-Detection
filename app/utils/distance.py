@@ -5,6 +5,8 @@ import numpy as np
 
 from app.models.schemas import Actor, ActorDistance, DistanceKeypoint
 
+MIN_KEYPOINT_CONFIDENCE = 0.3
+
 
 def compute_actor_distances(
     actors: list[Actor],
@@ -22,13 +24,13 @@ def compute_actor_distances(
         best_kp_b = None
 
         for kp_a in a.keypoints:
-            if kp_a.confidence < 0.3:
+            if kp_a.confidence < MIN_KEYPOINT_CONFIDENCE:
                 continue
             ax, ay = int(min(max(kp_a.x, 0), w - 1)), int(min(max(kp_a.y, 0), h - 1))
             a_depth = float(depth_map[ay, ax])
 
             for kp_b in b.keypoints:
-                if kp_b.confidence < 0.3:
+                if kp_b.confidence < MIN_KEYPOINT_CONFIDENCE:
                     continue
                 bx, by = int(min(max(kp_b.x, 0), w - 1)), int(min(max(kp_b.y, 0), h - 1))
                 b_depth = float(depth_map[by, bx])

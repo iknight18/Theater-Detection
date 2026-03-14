@@ -51,11 +51,14 @@ async def estimate_pose(
     if show_distances is None:
         show_distances = settings.show_distances
 
-    distances = None
+    distances = [] if show_distances else None
     if show_distances and len(result.actors) >= 2:
         depth_estimator = request.app.state.depth_estimator
         if depth_estimator is None:
-            raise HTTPException(status_code=503, detail="Depth model not initialized")
+            raise HTTPException(
+                status_code=503,
+                detail="Depth model not loaded. Set SHOW_DISTANCES=true in config to load it at startup.",
+            )
         depth_map = depth_estimator.estimate(image)
         distances = compute_actor_distances(result.actors, depth_map)
 

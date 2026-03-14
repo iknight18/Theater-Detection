@@ -18,9 +18,12 @@ async def lifespan(app: FastAPI):
     estimator.load_model()
     app.state.estimator = estimator
 
-    depth_estimator = DepthEstimator(device=settings.device)
-    depth_estimator.load_model()
-    app.state.depth_estimator = depth_estimator
+    if settings.show_distances:
+        depth_estimator = DepthEstimator(device=settings.device)
+        depth_estimator.load_model()
+        app.state.depth_estimator = depth_estimator
+    else:
+        app.state.depth_estimator = None
 
     yield
     app.state.estimator = None
