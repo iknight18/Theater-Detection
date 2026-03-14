@@ -61,6 +61,9 @@ def _save_strategy_results(
     """Save annotated image and metadata for one strategy."""
     strategy_dir.mkdir(parents=True, exist_ok=True)
 
+    # Save the exact image fed to the model
+    inference_image.save(strategy_dir / "input.png", format="PNG")
+
     # Draw detections on the original image
     annotated = draw_pose_on_image(
         original_image, result.actors, scale_x=scale_x, scale_y=scale_y
