@@ -66,7 +66,7 @@ class YoloPoseEstimator(PoseEstimator):
                     ))
 
             # Generate annotated image
-            annotated_array = result.plot()
+            annotated_array = result.plot(line_width=1, labels=False, conf=False)
             annotated_image = Image.fromarray(annotated_array[..., ::-1])  # BGR to RGB
 
         return PoseResult(
