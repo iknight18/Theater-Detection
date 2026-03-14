@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     max_file_size_mb: int = 10
     allowed_extensions: set[str] = {"jpg", "jpeg", "png", "webp"}
     min_image_dimension: int = 64  # minimum width/height in px
+    show_distances: bool = False
 
     model_config = {"env_prefix": "", "case_sensitive": False}
 

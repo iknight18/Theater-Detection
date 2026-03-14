@@ -12,6 +12,11 @@ def test_default_settings():
     assert settings.min_image_dimension == 64
 
 
+def test_show_distances_default():
+    settings = Settings()
+    assert settings.show_distances is False
+
+
 def test_custom_settings_from_env(monkeypatch):
     monkeypatch.setenv("MODEL_NAME", "yolov8n-pose.pt")
     monkeypatch.setenv("CONFIDENCE_THRESHOLD", "0.7")
