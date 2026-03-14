@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 
 from app.config import get_settings
+from app.services.depth_estimator import DepthEstimator
 from app.services.yolo_estimator import YoloPoseEstimator
 
 @asynccontextmanager
@@ -16,8 +17,14 @@ async def lifespan(app: FastAPI):
     )
     estimator.load_model()
     app.state.estimator = estimator
+
+    depth_estimator = DepthEstimator(device=settings.device)
+    depth_estimator.load_model()
+    app.state.depth_estimator = depth_estimator
+
     yield
     app.state.estimator = None
+    app.state.depth_estimator = None
 
 
 app = FastAPI(
