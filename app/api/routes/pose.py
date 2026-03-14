@@ -4,6 +4,8 @@ from fastapi import APIRouter, File, Query, Request, UploadFile, HTTPException
 
 from app.config import get_settings
 from app.models.schemas import PoseEstimationResponse, PoseMetadata
+from app.utils.distance import compute_actor_distances
+from app.utils.drawing import draw_distance_lines
 from app.utils.image import validate_image, resize_if_needed, save_annotated_image
 
 router = APIRouter(prefix="/api/v1/pose", tags=["Pose Estimation"])
@@ -18,6 +20,9 @@ async def estimate_pose(
     ),
     return_image: bool = Query(
         default=True, description="Include annotated image in response"
+    ),
+    show_distances: bool | None = Query(
+        default=None, description="Compute and display 3D distances between actors"
     ),
 ):
     settings = get_settings()
@@ -43,6 +48,20 @@ async def estimate_pose(
 
     result = estimator.predict(image, confidence_threshold=confidence_threshold)
 
+    if show_distances is None:
+        show_distances = settings.show_distances
+
+    distances = None
+    if show_distances and len(result.actors) >= 2:
+        depth_estimator = request.app.state.depth_estimator
+        if depth_estimator is None:
+            raise HTTPException(status_code=503, detail="Depth model not initialized")
+        depth_map = depth_estimator.estimate(image)
+        distances = compute_actor_distances(result.actors, depth_map)
+
+        if result.annotated_image is not None and distances:
+            result.annotated_image = draw_distance_lines(result.annotated_image, distances)
+
     image_id = str(uuid.uuid4())
 
     annotated_image_url = None
@@ -53,6 +72,7 @@ async def estimate_pose(
     return PoseEstimationResponse(
         image_id=image_id,
         actors=result.actors,
+        distances=distances,
         annotated_image_url=annotated_image_url,
         metadata=PoseMetadata(
             image_width=original_width,
