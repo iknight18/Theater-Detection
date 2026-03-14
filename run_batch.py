@@ -68,7 +68,7 @@ def process_image(
             )
 
     # Create output subfolder named after image (minus extension)
-    subfolder = output_dir / image_path.stem
+    subfolder = output_dir / image_path.name
     subfolder.mkdir(parents=True, exist_ok=True)
 
     # Save annotated image
@@ -136,7 +136,7 @@ def main(argv: list[str] | None = None) -> None:
             total_actors += actor_count
             print(f"{actor_count} actors")
         except Exception as e:
-            print(f"FAILED: {e}")
+            print(f"FAILED ({type(e).__name__}): {e}")
 
     elapsed = time.perf_counter() - start_time
     print(f"\nDone! {len(images)} images, {total_actors} actors, {elapsed:.1f}s")
