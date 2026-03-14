@@ -1,6 +1,9 @@
+import base64
 import io
 from pathlib import Path
 
+import cv2
+import numpy as np
 from PIL import Image
 
 ANNOTATED_DIR = Path(__file__).resolve().parent.parent.parent / "annotated_images"
@@ -64,3 +67,39 @@ def resize_if_needed(img: Image.Image, max_size: int) -> Image.Image:
     return img.resize((new_w, new_h), Image.LANCZOS)
 
 
+def image_to_base64(img: Image.Image) -> str:
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+def adaptive_enhance(img: Image.Image) -> Image.Image:
+    """Apply adaptive CLAHE + gamma correction based on image brightness.
+
+    Uses LAB color space to handle colored stage lighting independently
+    of luminance adjustment.
+    """
+    arr = np.array(img)
+    lab = cv2.cvtColor(arr, cv2.COLOR_RGB2LAB)
+
+    # Compute mean luminance (L channel range: 0-255)
+    mean_lum = lab[:, :, 0].mean()
+    norm_lum = mean_lum / 255.0
+
+    # Adaptive parameters: more boost for darker images
+    clip_limit = max(1.0, 5.0 - norm_lum * 4.0)
+    gamma = max(0.4, norm_lum ** 0.5)
+
+    # Apply CLAHE on L channel
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(8, 8))
+    lab[:, :, 0] = clahe.apply(lab[:, :, 0])
+
+    enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+
+    # Apply gamma correction
+    table = np.array(
+        [((i / 255.0) ** gamma) * 255 for i in range(256)]
+    ).astype("uint8")
+    enhanced = cv2.LUT(enhanced, table)
+
+    return Image.fromarray(enhanced)
