@@ -15,6 +15,21 @@ class Actor(BaseModel):
     keypoints: list[Keypoint]
 
 
+class DistanceKeypoint(BaseModel):
+    name: str
+    x: float
+    y: float
+    depth: float
+
+
+class ActorDistance(BaseModel):
+    actor_a: int
+    actor_b: int
+    distance: float
+    keypoint_a: DistanceKeypoint
+    keypoint_b: DistanceKeypoint
+
+
 class PoseMetadata(BaseModel):
     image_width: int
     image_height: int
@@ -26,5 +41,6 @@ class PoseMetadata(BaseModel):
 class PoseEstimationResponse(BaseModel):
     image_id: str
     actors: list[Actor]
+    distances: list[ActorDistance] | None = None
     annotated_image_url: str | None = None
     metadata: PoseMetadata
