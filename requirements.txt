@@ -7,3 +7,4 @@ pillow>=11.0.0
 python-multipart>=0.0.18
 scalar-fastapi>=1.0.0
 pytest>=8.0.0
+transformers>=4.40.0
