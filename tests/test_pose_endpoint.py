@@ -40,7 +40,7 @@ def test_estimate_without_annotated_image(client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["annotated_image"] is None
+    assert data["annotated_image_url"] is None
 
 
 def test_estimate_custom_confidence(client):

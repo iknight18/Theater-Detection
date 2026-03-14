@@ -36,12 +36,12 @@ def test_pose_estimation_response():
     response = PoseEstimationResponse(
         image_id="test-uuid",
         actors=[actor],
-        annotated_image=None,
+        annotated_image_url=None,
         metadata=metadata,
     )
     assert response.image_id == "test-uuid"
     assert response.metadata.actor_count == 1
-    assert response.annotated_image is None
+    assert response.annotated_image_url is None
 
 
 def test_actor_distance_schema():
