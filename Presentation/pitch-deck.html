@@ -520,71 +520,186 @@
     </div>
   </div>
 
-  <!-- ════════════════════ Navigation zones ════════════════════ -->
-  <div class="nav-zone nav-zone-left"  onclick="nextSlide()"></div>
-  <div class="nav-zone nav-zone-right" onclick="prevSlide()"></div>
+  <!-- Navigation buttons -->
+  <button class="nav-btn nav-btn-next nav-btn-dark" id="btnNext" onclick="nextSlide()" aria-label="Next slide">→</button>
+  <button class="nav-btn nav-btn-prev nav-btn-dark" id="btnPrev" onclick="prevSlide()" aria-label="Previous slide">←</button>
 
   <!-- ════════════════════ Slide counter ════════════════════ -->
-  <div class="slide-counter" id="slideCounter">1 / 12</div>
+  <div class="slide-counter" id="slideCounter">1 / 17</div>
 
   <!-- ════════════════════ Navigation JS ════════════════════ -->
   <script>
-    const TOTAL = 12;
-    let currentSlide = 0;
+const TOTAL = 17;
+let currentSlide = 0;
+let isTransitioning = false;
 
-    // Slides that are light (white bg) — counter should be dark
-    const lightSlides = new Set([3, 6, 7, 8, 9, 11]); // 1-based
+const lightSlides = new Set([3, 7, 8, 9, 10, 11, 15, 16]);
 
-    const slides = Array.from({ length: TOTAL }, (_, i) =>
-      document.getElementById('slide-' + (i + 1))
-    );
+const slides = Array.from({ length: TOTAL }, (_, i) =>
+  document.getElementById('slide-' + (i + 1))
+);
+const counter = document.getElementById('slideCounter');
+const btnNext = document.getElementById('btnNext');
+const btnPrev = document.getElementById('btnPrev');
 
-    const counter = document.getElementById('slideCounter');
+function getTransitionType(fromIdx, toIdx) {
+  const fromLight = lightSlides.has(fromIdx + 1);
+  const toLight = lightSlides.has(toIdx + 1);
+  if (!fromLight && !toLight) return 'crossfade';
+  if (!fromLight && toLight) return 'curtain-lift';
+  if (fromLight && toLight) return 'horizontal';
+  if (fromLight && !toLight) return 'fade-black';
+  return 'crossfade';
+}
 
-    function goTo(n) {
-      // Clamp
-      n = Math.max(0, Math.min(TOTAL - 1, n));
+function updateNavColors() {
+  const isLight = lightSlides.has(currentSlide + 1);
+  const darkClass = 'nav-btn-dark';
+  const lightClass = 'nav-btn-light';
+  [btnNext, btnPrev].forEach(btn => {
+    btn.classList.remove(darkClass, lightClass);
+    btn.classList.add(isLight ? lightClass : darkClass);
+  });
+  counter.style.color = isLight ? '#555' : 'rgba(255,255,255,0.6)';
+}
 
-      // Remove active from current
-      if (slides[currentSlide]) {
-        slides[currentSlide].classList.remove('active');
-      }
+function goTo(n) {
+  if (isTransitioning) return;
+  n = Math.max(0, Math.min(TOTAL - 1, n));
+  if (n === currentSlide) return;
 
-      currentSlide = n;
+  isTransitioning = true;
+  const from = slides[currentSlide];
+  const to = slides[n];
+  const type = getTransitionType(currentSlide, n);
 
-      // Add active to target
-      slides[currentSlide].classList.add('active');
+  from.classList.add('exiting');
 
-      // Update counter
-      const slideNumber = currentSlide + 1;
-      counter.textContent = slideNumber + ' / ' + TOTAL;
+  to.style.transition = 'none';
+  to.style.transform = '';
+  to.style.opacity = '0';
 
-      // Counter color: dark slides → light text, light slides → dark text
-      if (lightSlides.has(slideNumber)) {
-        counter.style.color = '#555';
-      } else {
-        counter.style.color = 'rgba(255,255,255,0.6)';
-      }
+  switch (type) {
+    case 'crossfade':
+      from.style.transition = 'opacity 0.4s ease';
+      from.style.opacity = '0';
+      to.style.transition = 'opacity 0.4s ease';
+      to.classList.add('active');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { to.style.opacity = '1'; });
+      });
+      break;
+    case 'curtain-lift':
+      to.style.transform = 'translateY(100%)';
+      to.style.opacity = '1';
+      to.classList.add('active');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          to.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+          to.style.transform = 'translateY(0)';
+        });
+      });
+      break;
+    case 'horizontal':
+      const dir = n > currentSlide ? '-100%' : '100%';
+      to.style.transform = `translateX(${n > currentSlide ? '100%' : '-100%'})`;
+      to.style.opacity = '1';
+      to.classList.add('active');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          from.style.transition = 'transform 0.5s ease';
+          from.style.transform = `translateX(${dir})`;
+          to.style.transition = 'transform 0.5s ease';
+          to.style.transform = 'translateX(0)';
+        });
+      });
+      break;
+    case 'fade-black':
+      from.style.transition = 'opacity 0.3s ease';
+      from.style.opacity = '0';
+      setTimeout(() => {
+        to.classList.add('active');
+        to.style.transition = 'opacity 0.3s ease';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => { to.style.opacity = '1'; });
+        });
+      }, 300);
+      break;
+  }
+
+  const transitionDuration = type === 'fade-black' ? 600 : type === 'curtain-lift' ? 600 : 500;
+  setTimeout(() => {
+    from.classList.remove('active', 'exiting');
+    from.style.transition = 'none';
+    from.style.transform = '';
+    from.style.opacity = '0';
+    currentSlide = n;
+    counter.textContent = (currentSlide + 1) + ' / ' + TOTAL;
+    updateNavColors();
+    triggerSlideAnimations(currentSlide);
+    isTransitioning = false;
+  }, transitionDuration);
+}
+
+function nextSlide() { if (currentSlide < TOTAL - 1) goTo(currentSlide + 1); }
+function prevSlide() { if (currentSlide > 0) goTo(currentSlide - 1); }
+
+function animateCounters(slideEl) {
+  const counters = slideEl.querySelectorAll('[data-counter]');
+  counters.forEach(el => {
+    const target = parseInt(el.dataset.counter, 10);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    let start = 0;
+    const duration = 1500;
+    const startTime = performance.now();
+    function update(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(start + (target - start) * eased);
+      el.textContent = prefix + current + suffix;
+      if (progress < 1) requestAnimationFrame(update);
     }
+    requestAnimationFrame(update);
+  });
+}
 
-    function nextSlide() {
-      if (currentSlide < TOTAL - 1) goTo(currentSlide + 1);
-    }
+function triggerSlideAnimations(idx) {
+  const slide = slides[idx];
+  animateCounters(slide);
+}
 
-    function prevSlide() {
-      if (currentSlide > 0) goTo(currentSlide - 1);
-    }
+document.addEventListener('keydown', function(e) {
+  switch(e.key) {
+    case 'ArrowLeft': case 'PageDown': case ' ':
+      e.preventDefault(); nextSlide(); break;
+    case 'ArrowRight': case 'PageUp': case 'Backspace':
+      e.preventDefault(); prevSlide(); break;
+    case 'Home':
+      e.preventDefault(); goTo(0); break;
+    case 'End':
+      e.preventDefault(); goTo(TOTAL - 1); break;
+  }
+});
 
-    // Keyboard navigation (RTL: ArrowLeft = next, ArrowRight = previous)
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowLeft')  nextSlide();
-      if (e.key === 'ArrowRight') prevSlide();
-    });
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 50) {
+    if (diff < 0) nextSlide();
+    else prevSlide();
+  }
+});
 
-    // Initialize on load
-    document.addEventListener('DOMContentLoaded', function () {
-      goTo(0);
-    });
+document.addEventListener('DOMContentLoaded', function() {
+  slides[0].classList.add('active');
+  slides[0].style.opacity = '1';
+  counter.textContent = '1 / ' + TOTAL;
+  updateNavColors();
+  triggerSlideAnimations(0);
+});
   </script>
 </body>
 </html>
