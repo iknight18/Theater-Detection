@@ -14,39 +14,46 @@
     body {
       font-family: 'Tajawal', sans-serif;
       overflow: hidden;
-      background: #1a1a2e;
+      background: #0a0a1a;
+    }
+
+    :root {
+      --deep-stage: #0a0a1a;
+      --navy: #1a1a2e;
+      --navy-mid: #16213e;
+      --navy-deep: #0f3460;
+      --ivory: #faf7f0;
+      --ivory-dark: #f0ebe0;
+      --gold: #c9a84c;
+      --gold-light: #e8c55a;
+      --text-light: #b0b8d8;
+      --text-dark: #333;
+      --text-dark-secondary: #444;
+      --muted-gold: #8a7a5a;
     }
 
     /* ── Slide base ── */
     .slide {
       width: 100vw;
       height: 100vh;
-      display: none;
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
+      display: flex;
+      visibility: hidden;
       opacity: 0;
-      transition: opacity 0.4s ease;
+      transition: none;
     }
     .slide.active {
-      display: flex;
+      visibility: visible;
       opacity: 1;
     }
-
-    /* ── Design tokens ── */
-    :root {
-      --navy: #1a1a2e;
-      --navy-mid: #16213e;
-      --navy-deep: #0f3460;
-      --white-warm: #faf7f3;
-      --gold: #c9a84c;
-      --text-light: #b0b8d8;
-      --text-dark: #333;
+    .slide.exiting {
+      visibility: visible;
     }
 
-    /* ── Slide variants ── */
+    /* ── Dark slides ── */
     .slide-dark {
-      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 60%, var(--navy-deep) 100%);
+      background: linear-gradient(135deg, var(--deep-stage) 0%, var(--navy) 40%, var(--navy-mid) 100%);
       color: #fff;
       justify-content: center;
       align-items: center;
@@ -55,8 +62,9 @@
       padding: 60px 80px;
     }
 
+    /* ── Light slides ── */
     .slide-light {
-      background: var(--white-warm);
+      background: linear-gradient(160deg, var(--ivory) 0%, var(--ivory-dark) 100%);
       color: var(--text-dark);
       flex-direction: column;
       padding: 50px 80px;
@@ -74,54 +82,62 @@
 
     .slide-subtitle {
       font-size: 22px;
-      color: var(--text-light);
       font-style: italic;
       margin-bottom: 32px;
+    }
+    .slide-dark .slide-subtitle { color: var(--text-light); }
+    .slide-light .slide-subtitle { color: var(--muted-gold); }
+
+    /* ── Spotlight glow ── */
+    .spotlight {
+      position: absolute;
+      top: -10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 50%;
+      background: radial-gradient(ellipse, rgba(201,168,76,0.15), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Glass morphism card (dark slides) ── */
+    .glass-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 12px;
+      padding: 30px;
+    }
+
+    /* ── Elevated card (light slides) ── */
+    .elevated-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid rgba(201,168,76,0.15);
+    }
+
+    /* ── Gold bar ── */
+    .gold-bar {
+      width: 80px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 20px auto;
     }
 
     /* ── Footer ── */
     .slide-footer {
       position: absolute;
       bottom: 40px;
-      right: 80px;
-      left: 80px;
+      right: 80px; left: 80px;
       font-size: 18px;
       text-align: center;
     }
     .slide-dark .slide-footer { color: var(--text-light); }
     .slide-light .slide-footer { color: #666; }
-
-    /* ── Gold bar ── */
-    .gold-bar {
-      width: 80px;
-      height: 3px;
-      background: var(--gold);
-      margin: 20px auto;
-    }
-
-    /* ── Cards ── */
-    .cards-row {
-      display: flex;
-      gap: 30px;
-      justify-content: center;
-      flex-direction: row-reverse;
-      margin-top: 40px;
-    }
-    .card {
-      border: 2px solid var(--gold);
-      border-radius: 12px;
-      padding: 30px;
-      flex: 1;
-      max-width: 300px;
-      text-align: right;
-    }
-    .card h3 {
-      font-family: 'Amiri', serif;
-      font-size: 22px;
-      color: var(--navy);
-      margin-bottom: 12px;
-    }
-    .card p { font-size: 16px; line-height: 1.8; }
 
     /* ── Split layout ── */
     .split {
@@ -146,39 +162,13 @@
       object-fit: contain;
     }
 
-    /* ── Standalone image ── */
-    .slide-image {
-      max-width: 90%;
-      max-height: 60vh;
-      object-fit: contain;
-      margin: 20px auto;
-      display: block;
-      border-radius: 8px;
-    }
-
-    /* ── Background overlay ── */
-    .bg-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-size: cover;
-      background-position: center;
-      z-index: 0;
-    }
-    .bg-overlay::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(26, 26, 46, 0.75);
-    }
-    .slide-dark .slide-content {
-      position: relative;
-      z-index: 1;
+    /* ── Cards row ── */
+    .cards-row {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-direction: row-reverse;
+      margin-top: 40px;
     }
 
     /* ── Bullet list ── */
@@ -195,6 +185,137 @@
       font-size: 14px;
     }
 
+    /* ── Background overlay ── */
+    .bg-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+    }
+    .bg-overlay::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 26, 0.75);
+    }
+    .slide-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Standalone image ── */
+    .slide-image {
+      max-width: 90%;
+      max-height: 60vh;
+      object-fit: contain;
+      margin: 20px auto;
+      display: block;
+      border-radius: 8px;
+    }
+
+    /* ── Animations ── */
+    @keyframes spotlightReveal {
+      from { opacity: 0; text-shadow: 0 0 0 transparent; }
+      to { opacity: 1; text-shadow: 0 0 20px rgba(201,168,76,0.4); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes drawLine {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    @keyframes scanLine {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+
+    /* ── Scan-line overlay for AI output images ── */
+    .scan-overlay {
+      position: relative;
+      overflow: hidden;
+    }
+    .scan-overlay::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0;
+      top: 0;
+    }
+    .slide.active .scan-overlay::after {
+      opacity: 0.6;
+      animation: scanLine 2s ease-in-out 0.5s forwards;
+    }
+
+    /* ── Slide entry animations ── */
+    .slide.active .anim-spotlight { animation: spotlightReveal 0.8s ease forwards; }
+    .slide.active .anim-fade-up { animation: fadeInUp 0.6s ease forwards; }
+    .slide.active .anim-scale { animation: scaleIn 0.5s ease forwards; }
+    .slide.active .anim-slide-left { animation: slideInLeft 0.6s ease forwards; }
+    .slide.active .anim-slide-right { animation: slideInRight 0.6s ease forwards; }
+    .anim-draw-line { width: 0; }
+    .slide.active .anim-draw-line { animation: drawLine 1s ease 0.3s forwards; }
+
+    /* Stagger delays — elements start hidden, animation reveals them via fill-mode: forwards */
+    .stagger-1 { animation-delay: 0s !important; animation-fill-mode: forwards !important; }
+    .stagger-2 { animation-delay: 0.15s !important; animation-fill-mode: forwards !important; }
+    .stagger-3 { animation-delay: 0.3s !important; animation-fill-mode: forwards !important; }
+    .stagger-4 { animation-delay: 0.45s !important; animation-fill-mode: forwards !important; }
+    .stagger-5 { animation-delay: 0.6s !important; animation-fill-mode: forwards !important; }
+    /* Hide staggered elements until their slide is active and animation runs */
+    .slide:not(.active) [class*="stagger-"] { opacity: 0; }
+
+    /* ── Navigation buttons ── */
+    .nav-btn {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 60;
+      opacity: 0;
+      transition: opacity 0.3s ease, background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-btn:hover { opacity: 0.6; }
+    body:hover .nav-btn { opacity: 0.15; }
+    body:hover .nav-btn:hover { opacity: 0.6; }
+
+    .nav-btn-next { left: 20px; }
+    .nav-btn-prev { right: 20px; }
+
+    /* Adapt to slide background */
+    .nav-btn-dark {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    .nav-btn-light {
+      background: rgba(0,0,0,0.1);
+      color: #333;
+    }
+
     /* ── Slide counter ── */
     .slide-counter {
       position: fixed;
@@ -203,32 +324,21 @@
       font-size: 14px;
       z-index: 100;
       font-family: 'Tajawal', sans-serif;
+      transition: color 0.3s ease;
     }
-
-    /* ── Click navigation zones ── */
-    .nav-zone {
-      position: fixed;
-      top: 0;
-      bottom: 0;
-      width: 20%;
-      z-index: 50;
-      cursor: pointer;
-    }
-    .nav-zone-left  { left: 0; }
-    .nav-zone-right { right: 0; }
 
     /* ── Print ── */
     @media print {
       .slide {
         display: flex !important;
+        visibility: visible !important;
         opacity: 1 !important;
         position: relative !important;
         page-break-after: always;
         height: 100vh;
         width: 100%;
       }
-      .slide-counter { display: none; }
-      .nav-zone { display: none; }
+      .slide-counter, .nav-btn { display: none; }
     }
   </style>
 </head>
