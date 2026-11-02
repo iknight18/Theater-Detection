@@ -102,5 +102,5 @@ Environment variables:
 
 ## Licence
 
-MIT, see `LICENSE`. The model weights (YOLOv8-Pose, Ultralytics) are downloaded at first run and keep
-their own AGPL-3.0 licence.
+MIT, see `LICENSE`. It depends on the Ultralytics library and the YOLOv8-Pose weights it downloads at first
+run, which are licensed AGPL-3.0.
