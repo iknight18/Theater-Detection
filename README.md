@@ -2,6 +2,8 @@
 
 A pose estimation API designed for analyzing theater performances. Upload an image of a theater scene and get back actor pose keypoints and an annotated skeleton overlay.
 
+![Stage photo with each detected actor outlined and their skeleton drawn](docs/images/example-output.png)
+
 ## Purpose
 
 This is a research project exploring computer vision applied to theater performances. The API serves as the foundation for a broader analysis platform that will include:
@@ -97,3 +99,8 @@ Environment variables:
 ├── tests/                # Test suite
 └── docs/plans/           # Design & implementation docs
 ```
+
+## Licence
+
+MIT, see `LICENSE`. The model weights (YOLOv8-Pose, Ultralytics) are downloaded at first run and keep
+their own AGPL-3.0 licence.
